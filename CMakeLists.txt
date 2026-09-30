@@ -2099,6 +2099,11 @@ if(APPLE)
   target_sources(mixxx-lib PRIVATE src/util/appleosversion.mm)
 
   if(IOS)
+    # Production headers use FRIEND_TEST from gtest_prod.h even when tests are
+    # disabled. Provide a tiny stub so iOS builds do not need the gtest package.
+    target_include_directories(
+      mixxx-lib SYSTEM PUBLIC "${CMAKE_SOURCE_DIR}/packaging/ios/stubs"
+    )
     target_sources(
       mixxx-lib
       PRIVATE src/soundio/soundmanagerios.mm src/util/screensaverios.mm
@@ -2546,6 +2551,11 @@ if(APPLE)
         MACOSX_BUNDLE_INFO_PLIST
           "${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios/Info.plist.in"
         MACOSX_BUNDLE_GUI_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER}"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "${IOS_BUNDLE_IDENTIFIER}"
+        XCODE_ATTRIBUTE_PRODUCT_NAME "${IOS_BUNDLE_NAME}"
+        XCODE_ATTRIBUTE_CURRENT_PROJECT_VERSION "${IOS_BUNDLE_VERSION}"
+        XCODE_ATTRIBUTE_MARKETING_VERSION "${IOS_BUNDLE_SHORTVERSION}"
+        XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
     )
   elseif(MACOS_BUNDLE)
