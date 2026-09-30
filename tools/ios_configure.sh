@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
-# Configure Mixxx for iOS Simulator after vcpkg deps are installed.
+# Configure Mixxx for iOS (Simulator by default, or device with IOS_VCPKG_TRIPLET=arm64-ios).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VCPKG_ROOT="${MIXXX_VCPKG_ROOT:-$(cd "$ROOT/../mixxx-vcpkg" && pwd)}"
-TRIPLET="${VCPKG_TARGET_TRIPLET:-arm64-ios-simulator}"
-BUILD_DIR="${BUILD_DIR:-$ROOT/build-ios-simulator}"
+TRIPLET="${VCPKG_TARGET_TRIPLET:-${IOS_VCPKG_TRIPLET:-arm64-ios-simulator}}"
+
+if [[ "$TRIPLET" == "arm64-ios" ]]; then
+  SYSROOT="${CMAKE_OSX_SYSROOT:-iphoneos}"
+  BUILD_DIR="${BUILD_DIR:-$ROOT/build-ios-device}"
+else
+  SYSROOT="${CMAKE_OSX_SYSROOT:-iphonesimulator}"
+  BUILD_DIR="${BUILD_DIR:-$ROOT/build-ios-simulator}"
+fi
+
+# Free Personal Team signing requires a unique bundle id you control.
+BUNDLE_ID="${IOS_BUNDLE_IDENTIFIER:-com.gtrevg.mixxx}"
+# From Xcode → Settings → Accounts (Personal Team).
+DEVELOPMENT_TEAM="${IOS_DEVELOPMENT_TEAM:-A297B44B3J}"
 
 if [[ ! -x "$VCPKG_ROOT/vcpkg" ]]; then
   echo "ERROR: vcpkg not found at $VCPKG_ROOT"
@@ -14,7 +26,8 @@ fi
 
 if [[ ! -d "$VCPKG_ROOT/installed/$TRIPLET" && ! -d "$VCPKG_ROOT/vcpkg_installed/$TRIPLET" ]]; then
   echo "ERROR: triplet $TRIPLET not installed yet under $VCPKG_ROOT"
-  echo "Run: source tools/ios_buildenv.sh setup && source tools/ios_buildenv.sh install-deps"
+  echo "Run: export IOS_VCPKG_TRIPLET=$TRIPLET && source tools/ios_buildenv.sh setup"
+  echo "     then install deps for that triplet (hours)."
   exit 1
 fi
 
@@ -29,7 +42,7 @@ cmake -G Xcode \
   -DVCPKG_TARGET_TRIPLET="$TRIPLET" \
   -DMIXXX_VCPKG_ROOT="$VCPKG_ROOT" \
   -DCMAKE_SYSTEM_NAME=iOS \
-  -DCMAKE_OSX_SYSROOT=iphonesimulator \
+  -DCMAKE_OSX_SYSROOT="$SYSROOT" \
   -DCMAKE_OSX_ARCHITECTURES=arm64 \
   -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 \
   -DQML=OFF \
@@ -43,10 +56,14 @@ cmake -G Xcode \
   -DLILV=OFF \
   -DKEYFINDER=ON \
   -DFFMPEG=ON \
-  -DIOS_BUNDLE_IDENTIFIER=org.mixxx.mixxx.ios \
+  -DIOS_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+  -DIOS_DEVELOPMENT_TEAM="$DEVELOPMENT_TEAM" \
   "$ROOT"
 
 echo ""
-echo "Configured in $BUILD_DIR"
+echo "Configured in $BUILD_DIR (triplet=$TRIPLET sysroot=$SYSROOT)"
 echo "Build with:"
 echo "  cmake --build \"$BUILD_DIR\" --config RelWithDebInfo --target mixxx"
+if [[ "$TRIPLET" == "arm64-ios" ]]; then
+  echo "Then open the Xcode project, select your iPad, and Product → Run."
+fi

@@ -2542,6 +2542,7 @@ if(APPLE)
       "${CMAKE_CURRENT_SOURCE_DIR}/packaging/ios/LaunchScreen.storyboard"
     )
 
+    set(IOS_DEVELOPMENT_TEAM "" CACHE STRING "Apple Development Team ID for device signing")
     set_target_properties(
       mixxx
       PROPERTIES
@@ -2557,6 +2558,9 @@ if(APPLE)
         XCODE_ATTRIBUTE_MARKETING_VERSION "${IOS_BUNDLE_SHORTVERSION}"
         XCODE_ATTRIBUTE_TARGETED_DEVICE_FAMILY "1,2"
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
+        XCODE_ATTRIBUTE_CODE_SIGN_STYLE "Automatic"
+        XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${IOS_DEVELOPMENT_TEAM}"
+        XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY "Apple Development"
     )
   elseif(MACOS_BUNDLE)
     install(
