@@ -128,6 +128,7 @@ WaveformWidgetFactory::WaveformWidgetFactory()
           m_configType(WaveformWidgetType::Empty),
           m_config(nullptr),
           m_skipRender(false),
+          m_appInBackground(false),
           m_frameRate(60),
           m_endOfTrackWarningTime(30),
           m_defaultZoom(WaveformWidgetRenderer::s_waveformDefaultZoom),
@@ -164,6 +165,24 @@ WaveformWidgetFactory::WaveformWidgetFactory()
     m_visualGain[Low] = kVisualGainDefault[Low];
     m_visualGain[Mid] = kVisualGainDefault[Mid];
     m_visualGain[High] = kVisualGainDefault[High];
+
+#if defined(Q_OS_IOS)
+    // Stop OpenGL waveform work while backgrounded so iOS does not kill us
+    // for drawing to a non-exposed GLES surface. Audio must keep running.
+    connect(qApp,
+            &QGuiApplication::applicationStateChanged,
+            this,
+            [this](Qt::ApplicationState state) {
+                const bool background = state == Qt::ApplicationInactive ||
+                        state == Qt::ApplicationSuspended;
+                if (background == m_appInBackground) {
+                    return;
+                }
+                m_appInBackground = background;
+                qDebug() << "WaveformWidgetFactory: applicationState"
+                         << state << "appInBackground" << m_appInBackground;
+            });
+#endif
 
 #ifdef MIXXX_USE_QOPENGL
     WGLWidget* widget = SharedGLContext::getWidget();
@@ -839,7 +858,7 @@ void WaveformWidgetFactory::renderSelf() {
     ScopedTimer t(QStringLiteral("WaveformWidgetFactory::render() %1waveforms"),
             static_cast<int>(m_waveformWidgetHolders.size()));
 
-    if (!m_skipRender) {
+    if (!m_skipRender && !m_appInBackground) {
         if (m_type) { // no regular updates for an empty waveform
             // next rendered frame is displayed after next buffer swap and than after VSync
             QVarLengthArray<bool, 10> shouldRenderWaveforms(
@@ -938,7 +957,7 @@ void WaveformWidgetFactory::swapSelf() {
             static_cast<int>(m_waveformWidgetHolders.size()));
 
     // Do this in an extra slot to be sure to hit the desired interval
-    if (!m_skipRender) {
+    if (!m_skipRender && !m_appInBackground) {
         if (m_type) { // no regular updates for an empty waveform
             // Show rendered buffer from last render() run
             // qDebug() << "swap() start" << m_vsyncThread->elapsed();
@@ -976,6 +995,11 @@ void WaveformWidgetFactory::swap() {
 }
 
 void WaveformWidgetFactory::swapAndRender() {
+    if (m_appInBackground) {
+        // Still release the vsync slot so the vsync thread does not stall.
+        m_vsyncThread->vsyncSlotFinished();
+        return;
+    }
     // used for PLL
     WGLWidget* widget = SharedGLContext::getWidget();
     widget->getOpenGLWindow()->update();

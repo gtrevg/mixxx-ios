@@ -106,8 +106,15 @@ bool WGLWidget::shouldRender() const {
     if (m_pOpenGLWindow->isExposed()) {
         return true;
     }
+#ifdef Q_OS_IOS
+    // On iOS a non-exposed surface usually means the app is backgrounded.
+    // Continuing to render then can invalidate GLES / kill the process, which
+    // looks like Mixxx "forgetting" the loaded decks on return.
+    return false;
+#else
     // Fallback: if the widget itself is visible, render anyway
     return isVisible();
+#endif
 }
 
 QOpenGLWindow* WGLWidget::getOpenGLWindow() const {

@@ -43,6 +43,12 @@
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
 
+    <!-- Keep PortAudio / playback running when Mixxx is backgrounded. -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+    </array>
+
     <key>NSMicrophoneUsageDescription</key>
     <string>Mixxx requires microphone access for microphone and vinyl input.</string>
 

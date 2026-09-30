@@ -327,7 +327,13 @@ int main(int argc, char * argv[]) {
 #endif
 
     // When the last window is closed, terminate the Qt event loop.
+    // On iOS, backgrounding must not quit — that would wipe in-memory deck
+    // state and look like Mixxx "forgot" what was playing.
+#if defined(Q_OS_IOS)
+    app.setQuitOnLastWindowClosed(false);
+#else
     QObject::connect(&app, &MixxxApplication::lastWindowClosed, &app, &MixxxApplication::quit);
+#endif
 
     int exitCode = runMixxx(&app, args);
 

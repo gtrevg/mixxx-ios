@@ -352,6 +352,9 @@ class WaveformWidgetFactory : public QObject,
     UserSettingsPointer m_config;
 
     bool m_skipRender;
+    // True while the app is inactive/suspended (iOS background). Separate from
+    // m_skipRender so skin/widget rebuilds are not confused with lifecycle.
+    bool m_appInBackground;
     int m_frameRate;
     int m_endOfTrackWarningTime;
     double m_defaultZoom;
